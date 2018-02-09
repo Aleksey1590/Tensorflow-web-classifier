@@ -47,12 +47,17 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         file.write(("<body>\n<h2>Please, upload 1 image and we will try to guess what's depicted on it </h2>\n").encode())
 
         file.write(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
-        # file.write(("<html>\n<title>Directory listing for %s</title>\n" % displaypath).encode())
-        # file.write(("<body>\n<h2>Directory listing for %s</h2>\n" % displaypath).encode())
         file.write(b"<hr>\n")
         file.write(b"<form ENCTYPE=\"multipart/form-data\" method=\"post\">")
-        file.write(b"<input name=\"file\" type=\"file\"/>")
-        file.write(b"<input type=\"submit\" value=\"upload\"/></form>\n")
+        file.write(b"<input name=\"imageToClassify\" type=\"file\"/>")
+        file.write(b"<input type=\"submit\" value=\"Classify this image\"/></form>\n")
+        
+        file.write(b"\n")
+
+        file.write(b"<form ENCTYPE=\"multipart/form-data\" method=\"post\">")
+        file.write(b"<input name=\"labeledImages\" type=\"file\"/ multiple>")
+        file.write(b"<input type=\"submit\" value=\"Upload labeled images\"/></form>\n")
+        
         file.write(b"<hr>\n<ul>\n")
         # for name in list:
         #     fullname = os.path.join(path, name)
@@ -77,7 +82,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 
-    def handleServer(self):
+    def handleImageClassification(self):
         print ("_____")
         content_type = self.headers['content-type']
         if not content_type:
@@ -89,21 +94,39 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         if not boundary in line:
             return (False, "Content NOT begin with boundary")
         line = self.rfile.readline()
+        lineList = line.decode()
+        lineList = lineList.split(";")
+        
         remainbytes -= len(line)
+        
+        fileType = lineList[1]
+        start_pt = fileType.find("\"")
+        end_pt = fileType.find("\"", start_pt + 1)  # add one to skip the opening "
+        fileType = fileType[start_pt + 1: end_pt]  # add one to get the quote excluding the ""
+        if not fileType:
+            return (False, "Can't find what function is required...")
 
-        filename = re.findall(r'Content-Disposition.*name="file"; filename="(.*)"', line.decode())
+
+        filename = lineList[2]
+        start_pt = filename.find("\"")
+        end_pt = filename.find("\"", start_pt + 1)  # add one to skip the opening "
+        filename = filename[start_pt + 1: end_pt]  # add one to get the quote excluding the ""
         if not filename:
             return (False, "Can't find out file name...")
+
         path = self.translate_path(self.path)
         # print ("Path: ", path, type(path))
         # print ("filename: ", filename, type(filename))
-        labelClass = self.classifyImage(str(path), filename[0], (tfPath.Full_Path))
-
+        
+        if fileType=="imageToClassify":
+            labelClass = self.classifyImage(str(path), filename, (tfPath.Full_Path))
+        elif fileType=="labeledImages":
+            pass
+            # uploadTrainData = self.uploadTrainingData()
+        else:
+            return (False, "Unexpected mistake when determining fileType.")
 
         fileFullPath = os.path.join(path, filename[0])
-        # print ("fileFullPath: ", fileFullPath)
-        line = self.rfile.readline()
-        remainbytes -= len(line)
         line = self.rfile.readline()
         remainbytes -= len(line)
         try:
@@ -130,11 +153,14 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         print ("_____")
         return (False, "Unexpect Ends of data.")
 
+    
+
+   
+
     def do_GET(self):
         """Serve a GET request."""
         file = self.send_head()
         if file:
-            # self.copyfile(file, self.wfile)
             shutil.copyfileobj(file, self.wfile)
             file.close()
 
@@ -150,11 +176,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """Serve a POST request."""
-        response, info, labelClass = self.handleServer()
+        response, info, labelClass = self.handleImageClassification()
 
-        # print ("response: ", response)
-        # print ("info: ", info)
-        # print ("labelClass: ", labelClass)
         
         file = BytesIO()
         file.write(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
@@ -190,7 +213,6 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(length))
         self.end_headers()
         if file:
-            # self.copyfile(file, self.wfile)
             shutil.copyfileobj(file, self.wfile)
             file.close()
 
@@ -206,7 +228,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         None, in which case the caller has nothing further to do.
         """
 
-        path = self.translate_path(self.path)        
+        path = self.translate_path(self.path) 
+        print ("path: ", path)       
         file = None
         if os.path.isdir(path):
             if not self.path.endswith('/'):
@@ -264,15 +287,19 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         return path
 
 
-    def save_file(self, file):
-            print ("save_file")
-            outpath = os.path.join("", file.filename)
-            with open(outpath, 'wb') as fout:
-                shutil.copyfileobj(bytes(file.file), fout, 100000)
+    # def save_file(self, file):
+    #         print ("save_file")
+    #         outpath = os.path.join("", file.filename)
+    #         print ("outpath: ", outpath)
+    #         with open(outpath, 'wb') as fout:
+    #             print ("fout: ", fout)
+    #             shutil.copyfileobj(bytes(file.file), fout, 100000)
     
+    def createLabeledImageDirectory(self, dirname):
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
     
     def classifyImage(self, imagePath, imageName, tensorflowClassifyPath):
-        # tensorflow_classify_image = "python3 /Users/alexanderdubilet/Documents/tensorflow/models/tutorials/image/imagenet/classify_image.py "
         tensorflow_classify_image = "python3 " + tensorflowClassifyPath[0]
         image_file = " --image_file="+imagePath+"/"+imageName
         request = tensorflow_classify_image + image_file
@@ -282,13 +309,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         return pipe
 
 
-    # def trainModel(self, imagePath, imageName):
-        # tensorflowScriptPath = "python3 /Users/alexanderdubilet/Documents/tensorflow/models/tutorials/image/imagenet/classify_image.py "
-        # image_file = "--image_file="+imagePath+"/"+imageName
-        # print "Path: ", imagePath
-        # print "trying to train model: "
-        # os.system("python3 /Users/alexanderdubilet/Documents/tensorflow/models/tutorials/image/imagenet/classify_image.py --image_file="+path+"/"+pictureName.filename)
-        # os.system(tensorflowScriptPath + image_file)
+    def uploadTrainingData(self, folderPath):
+        pass
 
 
 def test(tensorflow_classify_image,
