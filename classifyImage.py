@@ -32,12 +32,6 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         interface the same as for send_head().
         """
 
-        # try:
-        #     list = os.listdir(path)
-        # except os.error:
-        #     self.send_error(404, "No permission to list directory")
-        #     return None
-        # list.sort(key=lambda a: a.lower())
         
         file = BytesIO()
         displaypath = cgi.escape(urllib.parse.unquote(self.path))
@@ -53,25 +47,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         file.write(b"<input type=\"submit\" value=\"Classify this image\"/></form>\n")
         
         file.write(b"\n")
-
-        file.write(b"<form ENCTYPE=\"multipart/form-data\" method=\"post\">")
-        file.write(b"<input name=\"labeledImages\" type=\"file\"/ multiple>")
-        file.write(b"<input type=\"submit\" value=\"Upload labeled images\"/></form>\n")
         
         file.write(b"<hr>\n<ul>\n")
-        # for name in list:
-        #     fullname = os.path.join(path, name)
-        #     displayname = linkname = name
-        #     # Append / for directories or @ for symbolic links
-        #     if os.path.isdir(fullname):
-        #         displayname = name + "/"
-        #         linkname = name + "/"
-        #     if os.path.islink(fullname):
-        #         displayname = name + "@"
-        #         # Note: a link to a directory displays with @ and links with /
-        #     file.write(('<li><a href="%s">%s</a>\n'
-        #             % (urllib.parse.quote(linkname), cgi.escape(displayname))).encode())
-        # file.write(b"</ul>\n<hr>\n</body>\n</html>\n")
         length = file.tell()
         file.seek(0)
         self.send_response(200)
@@ -115,14 +92,9 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             return (False, "Can't find out file name...")
 
         path = self.translate_path(self.path)
-        # print ("Path: ", path, type(path))
-        # print ("filename: ", filename, type(filename))
         
         if fileType=="imageToClassify":
             labelClass = self.classifyImage(str(path), filename, (tfPath.Full_Path))
-        elif fileType=="labeledImages":
-            pass
-            # uploadTrainData = self.uploadTrainingData()
         else:
             return (False, "Unexpected mistake when determining fileType.")
 
@@ -287,17 +259,6 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         return path
 
 
-    # def save_file(self, file):
-    #         print ("save_file")
-    #         outpath = os.path.join("", file.filename)
-    #         print ("outpath: ", outpath)
-    #         with open(outpath, 'wb') as fout:
-    #             print ("fout: ", fout)
-    #             shutil.copyfileobj(bytes(file.file), fout, 100000)
-    
-    def createLabeledImageDirectory(self, dirname):
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
     
     def classifyImage(self, imagePath, imageName, tensorflowClassifyPath):
         tensorflow_classify_image = "python3 " + tensorflowClassifyPath[0]
@@ -309,9 +270,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         return pipe
 
 
-    def uploadTrainingData(self, folderPath):
-        pass
-
+    
 
 def test(tensorflow_classify_image,
         HandlerClass = SimpleHTTPRequestHandler,

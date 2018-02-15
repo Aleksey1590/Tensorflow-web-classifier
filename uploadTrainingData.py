@@ -15,6 +15,7 @@ import subprocess
 import http.server
 import argparse
 import urllib.request, urllib.parse, urllib.error
+import uuid
 from io import BytesIO
 
 
@@ -32,12 +33,6 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         interface the same as for send_head().
         """
 
-        # try:
-        #     list = os.listdir(path)
-        # except os.error:
-        #     self.send_error(404, "No permission to list directory")
-        #     return None
-        # list.sort(key=lambda a: a.lower())
         
         file = BytesIO()
         displaypath = cgi.escape(urllib.parse.unquote(self.path))
@@ -48,30 +43,15 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
         file.write(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">')
         file.write(b"<hr>\n")
-        file.write(b"<form ENCTYPE=\"multipart/form-data\" method=\"post\">")
-        file.write(b"<input name=\"imageToClassify\" type=\"file\" accept=\"image/x-png,image/gif,image/jpeg\" />")
-        file.write(b"<input type=\"submit\" value=\"Classify this image\"/></form>\n")
         
         file.write(b"\n")
 
         file.write(b"<form ENCTYPE=\"multipart/form-data\" method=\"post\">")
-        file.write(b"<input name=\"labeledImages\" type=\"file\"/ multiple>")
+        file.write(b"<input name=\"labeledImages\" type=\"file\"/ accept=\"image/x-png,image/gif,image/jpeg\" multiple>")
         file.write(b"<input type=\"submit\" value=\"Upload labeled images\"/></form>\n")
         
         file.write(b"<hr>\n<ul>\n")
-        # for name in list:
-        #     fullname = os.path.join(path, name)
-        #     displayname = linkname = name
-        #     # Append / for directories or @ for symbolic links
-        #     if os.path.isdir(fullname):
-        #         displayname = name + "/"
-        #         linkname = name + "/"
-        #     if os.path.islink(fullname):
-        #         displayname = name + "@"
-        #         # Note: a link to a directory displays with @ and links with /
-        #     file.write(('<li><a href="%s">%s</a>\n'
-        #             % (urllib.parse.quote(linkname), cgi.escape(displayname))).encode())
-        # file.write(b"</ul>\n<hr>\n</body>\n</html>\n")
+        
         length = file.tell()
         file.seek(0)
         self.send_response(200)
@@ -82,7 +62,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 
-    def handleImageClassification(self):
+    def handleImageUpload(self):
         print ("_____")
         content_type = self.headers['content-type']
         if not content_type:
@@ -118,11 +98,13 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         # print ("Path: ", path, type(path))
         # print ("filename: ", filename, type(filename))
         
-        if fileType=="imageToClassify":
-            labelClass = self.classifyImage(str(path), filename, (tfPath.Full_Path))
-        elif fileType=="labeledImages":
-            pass
-            # uploadTrainData = self.uploadTrainingData()
+        if fileType=="labeledImages":
+            userID = uuid.uuid1()
+            print ("Trying to create directory: ", userID)
+            self.createLabeledImageDirectory("Hello")
+            print ("Trying to upload training data: ")
+            print ("Trying to start training process: ")
+            # labelClass = self.classifyImage(str(path), filename, (tfPath.Full_Path))
         else:
             return (False, "Unexpected mistake when determining fileType.")
 
@@ -145,7 +127,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
                     preline = preline[0:-1]
                 out.write(preline)
                 out.close()
-                return (True, "File '%s' upload success!" % fileFullPath, labelClass)
+                return (True, "File '%s' upload success!" % fileFullPath)
             else:
                 out.write(preline)
                 preline = line
@@ -176,7 +158,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """Serve a POST request."""
-        response, info, labelClass = self.handleImageClassification()
+        response, info = self.handleImageUpload()
 
         
         file = BytesIO()
@@ -186,25 +168,20 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         file.write(b"<hr>\n")
         if (response==True):
             file.write(b"<strong>Success: </strong>")
+            file.write(b"<hr>\n")
+            file.write(b"<body>\n<h3>Your training data has been successfully uploaded</h3>\n")
+            file.write(b"<hr>\n")
         else:
+            file.write(b"<hr>\n")
+            file.write(b"<body>\n<h3>Upload failed</h3>\n")
+            file.write(b"<hr>\n")
             file.write(b"<strong>Failed: </strong>")
+        
         file.write(info.encode())
         file.write(b"<hr>\n")
-        file.write(b"<body>\n<h3>Your file has been successfully uploaded</h3>\n")
+        file.write(b"<body>\n<h3>Your training data has been successfully uploaded</h3>\n")
         file.write(b"<hr>\n")
         
-        file.write(b'Classes: ')
-        file.write(b"<p>")
-        
-        for index,label in enumerate(labelClass, start=1): 
-            file.write(b"Guess: ")
-            encodeInt = str(index)
-            file.write(bytes(encodeInt.encode()))
-            
-            file.write(b"<p>")    
-            
-            file.write(bytes(label.encode()))
-            file.write(b"<p>")    
         
         length = file.tell()
         file.seek(0)
@@ -285,36 +262,28 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             if word in (os.curdir, os.pardir): continue
             path = os.path.join(path, word)
         return path
-
-
-    # def save_file(self, file):
-    #         print ("save_file")
-    #         outpath = os.path.join("", file.filename)
-    #         print ("outpath: ", outpath)
-    #         with open(outpath, 'wb') as fout:
-    #             print ("fout: ", fout)
-    #             shutil.copyfileobj(bytes(file.file), fout, 100000)
     
     def createLabeledImageDirectory(self, dirname):
+        os.chdir("/Users/alexanderdubilet/Documents/oxd553")
         if not os.path.exists(dirname):
-            os.makedirs(dirname)
+            print("Current dir: ", os.path)
+            # os.makedirs(dirname)
     
-    def classifyImage(self, imagePath, imageName, tensorflowClassifyPath):
-        tensorflow_classify_image = "python3 " + tensorflowClassifyPath[0]
-        image_file = " --image_file="+imagePath+"/"+imageName
-        request = tensorflow_classify_image + image_file
+    def classifyImage(self, imagePath, imageName):
+        # tensorflow_classify_image = "python3 " + tensorflowClassifyPath[0]
+        # image_file = " --image_file="+imagePath+"/"+imageName
+        # request = tensorflow_classify_image + image_file
         
-        # Returns a list of arguments Tensorflow has provided us with
-        pipe  = os.popen(request).readlines()
-        return pipe
-
+        # # Returns a list of arguments Tensorflow has provided us with
+        # pipe  = os.popen(request).readlines()
+        # return pipe
+        pass
 
     def uploadTrainingData(self, folderPath):
         pass
 
 
-def test(tensorflow_classify_image,
-        HandlerClass = SimpleHTTPRequestHandler,
+def test(HandlerClass = SimpleHTTPRequestHandler,
          ServerClass = HTTPServer):
     server_address = ('', 8000)    
     httpd = ServerClass(server_address, HandlerClass)
@@ -323,9 +292,10 @@ def test(tensorflow_classify_image,
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description='Please, insert a full path to your Tensorflow classify_image.py file. \n It should be something like that: tensorflow/models/tutorials/image/imagenet/classify_image.py')
-    parser.add_argument('Full_Path', help="Insert full path address of classify_image.py" ,metavar='Path', type=str, nargs='+')    
-    tfPath = parser.parse_args()
+    # parser = argparse.ArgumentParser(description='Please, insert a full path to your Tensorflow classify_image.py file. \n It should be something like that: tensorflow/models/tutorials/image/imagenet/classify_image.py')
+    # parser.add_argument('Full_Path', help="Insert full path address of classify_image.py" ,metavar='Path', type=str, nargs='+')    
+    # tfPath = parser.parse_args()
 
-    test(tfPath)
+    # test(tfPath)
+    test()
 
