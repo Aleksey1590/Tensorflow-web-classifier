@@ -2,6 +2,14 @@ import os
 import argparse
 import subprocess
 
+# Example usage: 
+# python3 neuralNetworkTrainer.py \
+# --image_dir=/Users/alexanderdubilet/Documents/oxd553/lightScripts/custom_models/animal_model/labeled_training_images \
+# --output_graph=/Users/alexanderdubilet/Documents/oxd553/lightScripts/custom_models/animal_model/output_graph.pb \
+# --output_labels=/Users/alexanderdubilet/Documents/oxd553/lightScripts/custom_models/animal_model/output_labels.txt \
+# --bottleneck_dir=/Users/alexanderdubilet/Documents/oxd553/lightScripts/custom_models/animal_model/bottleneck_animals \
+# --model_dir=/Users/alexanderdubilet/Documents/oxd553/imagenet_model
+# --how_many_training_steps=10 --------[optional]-------
 
 def main (
 	image_dir, 
@@ -13,7 +21,7 @@ def main (
 	):
 	request = ("python3 " 
 						+
-						"retrain.py "
+						"native_TF_scripts/retrain.py "
 						+ 
 						image_dir,
 						output_graph,
@@ -33,17 +41,20 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	
 	parser.add_argument(
-		'image_dir',
+		'--image_dir',
+		required=True,
 		type=str,
 		help='Absolute path to labeled training images.')
 
 	parser.add_argument(
-		'output_graph',
+		'--output_graph',
+		required=True,
 		type=str,
 		help='Save output graph to ... ')
 
 	parser.add_argument(
-		'output_labels',
+		'--output_labels',
+		required=True,
 		type=str,
 		help='Save output labels to ... ')
 
@@ -53,16 +64,19 @@ if __name__ == '__main__':
 	# 	help='Do we print images we are unsure about? ')
 
 	parser.add_argument(
-		'bottleneck_dir',
+		'--bottleneck_dir',
+		required=True,
 		type=str,
 		help='Save bottleneck to ... ')
 	parser.add_argument(
 		'--how_many_training_steps',
+		required=False,
 		type=int,
 		default=4000,
 		help='How many training steps we want to make. Default is 4000 ')
 	parser.add_argument(
-		'model_dir',
+		'--model_dir',
+		required=True,
 		type=str,
 		help="Path to imagenet folder")
 
