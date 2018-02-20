@@ -1,6 +1,6 @@
 Program uses Python 3
 
-#### Image Recognition:
+# Image Recognition:
 
 1. Download/Clone imagenet_model AND lightScripts [Ignore webInterface]
 2. Launch imageReciever.py in terminal by entering `python3 imageReciever.py image_file=<imagePath> model_dir=<modelDir>` where `imagePath` is Absolute Path to the image we want to recognize and `modelDir` is Absolute Path to Model folder (see help usage for more info)  
