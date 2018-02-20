@@ -5,10 +5,7 @@ Image Recognition
 1. Download/Clone imagenet_model AND lightScripts [Ignore webInterface]
 2. Launch imageReciever.py in terminal by entering `python3 imageReciever.py image_file=<imagePath> model_dir=<modelDir>` where `imagePath` is Absolute Path to the image we want to recognize and `modelDir` is Absolute Path to Model folder (see help usage for more info)  
 Example: 
-`python3 imageReciever.py \
-
---image_file=/Users/alexanderdubilet/Pictures/dog.jpg \  
---model_dir=/Users/alexanderdubilet/Documents/oxd553/imagenet_model`  
+`python3 imageReciever.py \ --image_file=/Users/alexanderdubilet/Pictures/dog.jpg \ --model_dir=/Users/alexanderdubilet/Documents/oxd553/imagenet_model`  
 
 3. You will receive an output in the terminal of classifier's guesses
 
